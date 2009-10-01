@@ -4,9 +4,11 @@
 #include "mmu.h"
 #include "proc.h"
 #include "x86.h"
+#include "spalloc.h"
 
 static void bootothers(void);
 static void mpmain(void) __attribute__((noreturn));
+static void spallocinit(void);
 
 // Bootstrap processor starts running C code here.
 int
@@ -36,6 +38,8 @@ main(void)
   userinit();      // first user process
   bootothers();    // start other processors
 
+  spallocinit();    //set some variables used by spalloc to their defaults
+
   // Finish setting up this processor in mpmain.
   mpmain();
 }
@@ -54,6 +58,12 @@ mpmain(void)
 
   cprintf("cpu%d: scheduling\n", cpu());
   scheduler();
+}
+
+static void
+spallocinit(void)
+{
+    hasOnePage = 0;
 }
 
 static void

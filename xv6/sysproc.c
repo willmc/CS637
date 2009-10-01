@@ -78,3 +78,9 @@ sys_sleep(void)
   release(&tickslock);
   return 0;
 }
+
+int 
+sys_tickcnt(void)
+{
+    return ticks; 
+}

@@ -14,6 +14,7 @@ OBJS = \
 	picirq.o\
 	pipe.o\
 	proc.o\
+	spalloc.o\
 	spinlock.o\
 	string.o\
 	swtch.o\
@@ -21,6 +22,7 @@ OBJS = \
 	sysfile.o\
 	sysproc.o\
 	timer.o\
+	traceproc.o\
 	trapasm.o\
 	trap.o\
 	vectors.o\
@@ -36,7 +38,7 @@ AS = $(TOOLPREFIX)gas
 LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
-CFLAGS = -fno-builtin -O2 -Wall -MD -ggdb -m32
+CFLAGS = -fno-builtin -O2 -Wall -MD -ggdb -m32 
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 ASFLAGS = -m32
 # FreeBSD ld wants ``elf_i386_fbsd''
@@ -106,9 +108,11 @@ UPROGS=\
 	_mkdir\
 	_rm\
 	_sh\
+	_testsched\
 	_usertests\
 	_wc\
 	_zombie\
+	_tickcnt\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)

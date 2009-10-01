@@ -11,6 +11,7 @@
 #include "mmu.h"
 #include "proc.h"
 #include "x86.h"
+#include "traceproc.h"
 
 #define CRTPORT 0x3d4
 #define LPTPORT 0x378
@@ -217,6 +218,11 @@ console_intr(int (*getc)(void))
         cons_putc(BACKSPACE);
       }
       break;
+
+    case C('T'): //trace the pids
+        printProcList(); 
+        break;
+
     default:
       if(c != 0 && input.e-input.r < INPUT_BUF){
         input.buf[input.e++ % INPUT_BUF] = c;

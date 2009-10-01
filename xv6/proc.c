@@ -5,6 +5,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "traceproc.h"
 
 struct spinlock proc_table_lock;
 
@@ -222,6 +223,7 @@ scheduler(void)
       c->curproc = p;
       setupsegs(p);
       p->state = RUNNING;
+      addProc(p->pid);
       swtch(&c->context, &p->context);
 
       // Process is done running for now.
