@@ -9,18 +9,7 @@ void addProc(int i)
     //newProc = (proc_node*)malloc(sizeof(proc_node));
     char *newmem;
     newmem = spalloc(32);
-    /*
-    newmem = kalloc(4096);
-    if(newmem == 0)
-    {
-        cprintf("b0rked\n");
-        return;
-    }
-    memmove(newmem, newProc->mem, 4096);
-    //kfree(newProc->mem, 4096);
 
-    //newProc->mem = kalloc(4096);
-    */
     newProc = (proc_node*) newmem;
     newProc->pid = i;
     newProc->next = 0; 

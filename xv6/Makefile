@@ -38,7 +38,7 @@ AS = $(TOOLPREFIX)gas
 LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
-CFLAGS = -fno-builtin -O2 -Wall -MD -ggdb -m32 
+CFLAGS = -fno-builtin -O2 -Wall -MD -ggdb -m32 -DLOTTERY -DSTRACE
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 ASFLAGS = -m32
 # FreeBSD ld wants ``elf_i386_fbsd''
@@ -99,7 +99,6 @@ mkfs: mkfs.c fs.h
 UPROGS=\
 	_cat\
 	_echo\
-	_forktest\
 	_grep\
 	_init\
 	_kill\
@@ -108,11 +107,13 @@ UPROGS=\
 	_mkdir\
 	_rm\
 	_sh\
-	_testsched\
 	_usertests\
 	_wc\
 	_zombie\
 	_tickcnt\
+	_testlottery\
+	#_forktest\
+	#_testsched\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
@@ -141,5 +142,6 @@ bochs : fs.img xv6.img
 	bochs -q
 
 qemu: fs.img xv6.img
-	qemu -parallel stdio -hdb fs.img xv6.img
+	ctags *.c *.h *.S 
+	qemu -parallel stdio -s -hdb fs.img xv6.img
 

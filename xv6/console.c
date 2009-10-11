@@ -218,10 +218,14 @@ console_intr(int (*getc)(void))
         cons_putc(BACKSPACE);
       }
       break;
-
+#ifdef STRACE
     case C('T'): //trace the pids
         printProcList(); 
         break;
+    case C('R'):
+        clearProcList();
+    break;
+#endif
 
     default:
       if(c != 0 && input.e-input.r < INPUT_BUF){

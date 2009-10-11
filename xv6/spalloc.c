@@ -8,6 +8,7 @@ char* spalloc(int i)
     if( hasOnePage == 0)
     {
         newMem = kalloc(4096);
+        hasOnePage = 1;
         sp_page = (spalloc_page*)newMem;
         sp_page->next = 0;
         sp_page->mem = newMem;

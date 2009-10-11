@@ -20,3 +20,6 @@
 #define SYS_sbrk   19
 #define SYS_sleep  20
 #define SYS_tickcnt 21
+#define SYS_get_tickets 22
+#define SYS_set_tickets 23
+#define SYS_gettimesrun 24

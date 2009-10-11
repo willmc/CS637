@@ -22,6 +22,8 @@ int getpid();
 char* sbrk(int);
 int sleep(int);
 int tickcnt(void);
+int get_tickets(int);
+int set_tickets(int, int);
 
 // ulib.c
 int stat(char*, struct stat*);

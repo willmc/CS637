@@ -29,25 +29,5 @@ int main(int argc, char *argv[])
     }
 
     exit();
-    /*
-    pid = fork();
-    //is it us?
-    if(pid == 0)
-    {
-        for(int i = 0; i < 100; i++)
-        {
-            k = i / 777;
-        }
-        exit();
-    }
-    else if( pid > 0)
-    {
-        for(int i = 0; i < 100; i++)
-        {
-            k = i / 777;
-        }
-        exit();
-    }
-    */
 }
 

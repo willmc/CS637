@@ -97,6 +97,10 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_tickcnt(void);
+extern int sys_get_tickets(void);
+extern int sys_set_tickets(void);
+extern int sys_gettimesrun(void);
+
 
 static int (*syscalls[])(void) = {
 [SYS_chdir]   sys_chdir,
@@ -120,6 +124,9 @@ static int (*syscalls[])(void) = {
 [SYS_wait]    sys_wait,
 [SYS_write]   sys_write,
 [SYS_tickcnt] sys_tickcnt,
+[SYS_get_tickets] sys_get_tickets,
+[SYS_set_tickets] sys_set_tickets,
+[SYS_gettimesrun] sys_gettimesrun
 };
 
 void

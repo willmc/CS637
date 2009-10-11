@@ -13,7 +13,12 @@ sys_fork(void)
   if((np = copyproc(cp)) == 0)
     return -1;
   pid = np->pid;
-  np->state = RUNNABLE;
+  //np->state = RUNNABLE;
+
+#ifdef LOTTERY
+  np->tickets = NEW_PROC_TICKETS;
+#endif
+  chngstate(np, RUNNABLE);
   return pid;
 }
 
@@ -83,4 +88,57 @@ int
 sys_tickcnt(void)
 {
     return ticks; 
+}
+
+extern struct proc proc[NPROC];
+
+int 
+sys_get_tickets()
+{
+#ifdef LOTTERY
+    int pid;
+    if(argint(0, &pid) < 0)
+        return -1;
+    if(pid >= NPROC || pid < 0)
+        return -2;
+    return proc[pid].tickets;
+#else
+    return -3;
+#endif
+}
+
+int
+sys_set_tickets()
+{
+#ifdef LOTTERY
+    int pid, newticket;
+    if(argint(0, &pid) || argint(1,&newticket))
+        return -1;
+    if(pid >= NPROC || pid < 0)
+        return -1;
+
+    set_tickets(pid, newticket);
+
+    return 0;
+#else
+    return -1;
+#endif
+}
+
+
+int 
+sys_gettimesrun()
+{
+    int pid, timesRun;
+    if(argint(0, &pid) < 0)
+        return -1;
+    if(pid >= NPROC || pid < 0)
+        return -1;
+
+    int i;
+    for( i = 0; i < NPROC; i++)
+    {
+       if(proc[i].pid == pid)
+           return proc[i].timesRun;
+    }
 }

@@ -8,7 +8,9 @@
 
 static void bootothers(void);
 static void mpmain(void) __attribute__((noreturn));
+#ifdef STRACE
 static void spallocinit(void);
+#endif
 
 // Bootstrap processor starts running C code here.
 int
@@ -37,9 +39,9 @@ main(void)
     timer_init();  // uniprocessor timer
   userinit();      // first user process
   bootothers();    // start other processors
-
+#ifdef STRACE
   spallocinit();    //set some variables used by spalloc to their defaults
-
+#endif
   // Finish setting up this processor in mpmain.
   mpmain();
 }

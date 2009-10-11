@@ -10,6 +10,9 @@
 struct spinlock proc_table_lock;
 
 struct proc proc[NPROC];
+struct spinlock proc_table_lock;
+
+int tickets = 0;
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -20,6 +23,22 @@ void
 pinit(void)
 {
   initlock(&proc_table_lock, "proc_table");
+}
+
+static unsigned long next_int = 1;
+
+void
+srand(unsigned long seed)
+{
+    next_int = seed;
+}
+
+unsigned int 
+rand()
+{
+    //PRNG based off of Aaron's
+    next_int = next_int * 1103515245 + 12345;
+    return((unsigned)(next_int/65536) % 32767);
 }
 
 // Look in the process table for an UNUSED proc.
@@ -35,7 +54,7 @@ allocproc(void)
   for(i = 0; i < NPROC; i++){
     p = &proc[i];
     if(p->state == UNUSED){
-      p->state = EMBRYO;
+        chngstate(p, EMBRYO);
       p->pid = nextpid++;
       release(&proc_table_lock);
       return p;
@@ -112,7 +131,7 @@ copyproc(struct proc *p)
 
   // Allocate kernel stack.
   if((np->kstack = kalloc(KSTACKSIZE)) == 0){
-    np->state = UNUSED;
+      chngstate(np, UNUSED);
     return 0;
   }
   np->tf = (struct trapframe*)(np->kstack + KSTACKSIZE) - 1;
@@ -174,7 +193,12 @@ userinit(void)
   p->tf->eip = 0;
   memmove(p->mem, _binary_initcode_start, (int)_binary_initcode_size);
   safestrcpy(p->name, "initcode", sizeof(p->name));
-  p->state = RUNNABLE;
+  //p->state = RUNNABLE;
+#ifdef LOTTERY
+  p->tickets = STARTING_TICKETS;
+#endif
+  //p->state = UNUSED;
+  chngstate(p,RUNNABLE);
   
   initproc = p;
 }
@@ -189,6 +213,27 @@ curproc(void)
   p = cpus[cpu()].curproc;
   popcli();
   return p;
+}
+
+void
+chngstate(struct proc *p, enum proc_state _s)
+{
+#ifdef LOTTERY
+    if(p->state == RUNNABLE || p->state == RUNNING)
+    {
+        if(!(_s == RUNNABLE || _s == RUNNING))
+        {
+            //remove tix
+            tickets -= p->tickets;
+        }
+    } else {
+        if (_s == RUNNABLE || _s == RUNNING ) {
+            //add tix
+            tickets += p->tickets;
+        }
+    }
+#endif
+    p->state = _s;
 }
 
 // Per-CPU process scheduler.
@@ -207,29 +252,55 @@ scheduler(void)
 
   c = &cpus[cpu()];
   for(;;){
+    srand(ticks);
     // Enable interrupts on this processor.
     sti();
 
-    // Loop over process table looking for process to run.
     acquire(&proc_table_lock);
+#ifdef LOTTERY
+    if(tickets == 0)
+    {
+        release(&proc_table_lock);
+        continue;
+    }
+
+    int sum = 0;
+    int denom = (32767 / tickets + 1);
+    int winner = rand() / denom;
+#endif
+
+    // Loop over process table looking for process to run.
     for(i = 0; i < NPROC; i++){
       p = &proc[i];
       if(p->state != RUNNABLE)
         continue;
 
+#ifdef LOTTERY
+      //find the process that's the winner, otherwise skip over it
+      sum += p->tickets;
+      if(sum <= winner)
+          continue;
+#endif
       // Switch to chosen process.  It is the process's job
       // to release proc_table_lock and then reacquire it
       // before jumping back to us.
       c->curproc = p;
       setupsegs(p);
-      p->state = RUNNING;
+      chngstate(p, RUNNING);
+      p->timesRun = p->timesRun + 1;
+
+#ifdef STRACE
       addProc(p->pid);
+#endif 
       swtch(&c->context, &p->context);
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->curproc = 0;
       setupsegs(0);
+#ifdef LOTTERY
+      break;
+#endif
     }
     release(&proc_table_lock);
 
@@ -258,7 +329,7 @@ void
 yield(void)
 {
   acquire(&proc_table_lock);
-  cp->state = RUNNABLE;
+  chngstate(cp, RUNNABLE);
   sched();
   release(&proc_table_lock);
 }
@@ -299,7 +370,7 @@ sleep(void *chan, struct spinlock *lk)
 
   // Go to sleep.
   cp->chan = chan;
-  cp->state = SLEEPING;
+  chngstate(cp, SLEEPING);
   sched();
 
   // Tidy up.
@@ -321,7 +392,7 @@ wakeup1(void *chan)
 
   for(p = proc; p < &proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan)
-      p->state = RUNNABLE;
+        chngstate(p, RUNNABLE);
 }
 
 // Wake up all processes sleeping on chan.
@@ -347,7 +418,7 @@ kill(int pid)
       p->killed = 1;
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING)
-        p->state = RUNNABLE;
+          chngstate(p, RUNNABLE);
       release(&proc_table_lock);
       return 0;
     }
@@ -395,7 +466,7 @@ exit(void)
 
   // Jump into the scheduler, never to return.
   cp->killed = 0;
-  cp->state = ZOMBIE;
+  chngstate(cp, ZOMBIE);
   sched();
   panic("zombie exit");
 }
@@ -422,7 +493,7 @@ wait(void)
           kfree(p->mem, p->sz);
           kfree(p->kstack, KSTACKSIZE);
           pid = p->pid;
-          p->state = UNUSED;
+          chngstate(p, UNUSED);
           p->pid = 0;
           p->parent = 0;
           p->name[0] = 0;
@@ -477,7 +548,32 @@ procdump(void)
       for(j=0; j<10 && pc[j] != 0; j++)
         cprintf(" %p", pc[j]);
     }
+#ifdef LOTTERY
+    cprintf(" %d", p->tickets);
+#endif
     cprintf("\n");
   }
 }
 
+int
+set_tickets(int pid, int newtkt)
+{
+    struct proc *p;
+    int i;
+    acquire(&proc_table_lock);
+    for(i = 0; i < NPROC; i++)
+    {
+        if(proc[i].pid == pid)
+        {
+            p = &proc[i];
+            if(p->state == RUNNABLE || p->state == RUNNING)
+                tickets += newtkt - p->tickets;
+            p->tickets = newtkt;
+            release(&proc_table_lock);
+
+            return 0;
+        }
+    }
+    release(&proc_table_lock);
+    return -1;
+}
