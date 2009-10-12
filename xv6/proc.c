@@ -26,6 +26,7 @@ pinit(void)
 }
 
 static unsigned long next_int = 1;
+static unsigned int other_int = 42;
 
 void
 srand(unsigned long seed)
@@ -36,9 +37,9 @@ srand(unsigned long seed)
 unsigned int 
 rand()
 {
-    //PRNG based off of Aaron's
+    //PRNG based off the C Book
     next_int = next_int * 1103515245 + 12345;
-    return((unsigned)(next_int/65536) % 32767);
+    return((unsigned int)(next_int/65536) % 32768);
 }
 
 // Look in the process table for an UNUSED proc.
@@ -252,7 +253,6 @@ scheduler(void)
 
   c = &cpus[cpu()];
   for(;;){
-    srand(ticks);
     // Enable interrupts on this processor.
     sti();
 
@@ -287,7 +287,7 @@ scheduler(void)
       c->curproc = p;
       setupsegs(p);
       chngstate(p, RUNNING);
-      p->timesRun = p->timesRun + 1;
+      p->timesRun += 1;
 
 #ifdef STRACE
       addProc(p->pid);
@@ -464,6 +464,7 @@ exit(void)
     }
   }
 
+  cp->timesRun = 0;
   // Jump into the scheduler, never to return.
   cp->killed = 0;
   chngstate(cp, ZOMBIE);
