@@ -24,6 +24,7 @@ int sleep(int);
 int tickcnt(void);
 int get_tickets(int);
 int set_tickets(int, int);
+int check(int, int);
 
 // ulib.c
 int stat(char*, struct stat*);

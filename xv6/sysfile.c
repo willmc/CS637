@@ -402,7 +402,7 @@ sys_check(void)
 
     int fd, offset;
 
-    if(argfd(0, &fd, &f) < 0 || argint(1, &offset) < 0)
+    if(argfd(0, 0, &f) < 0 || argint(1, &offset) < 0 || argint(0, &fd) < 0)
     {
         return -1;
     }
@@ -412,5 +412,5 @@ sys_check(void)
         return -1;
     }
 
-    return filecheck(fd, offset);
+    return filecheck(f, offset);
 }
