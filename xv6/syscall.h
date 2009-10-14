@@ -23,3 +23,4 @@
 #define SYS_get_tickets 22
 #define SYS_set_tickets 23
 #define SYS_gettimesrun 24
+#define SYS_check   25

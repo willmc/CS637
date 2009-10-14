@@ -5,6 +5,10 @@
 #include "spinlock.h"
 #include "dev.h"
 
+#include "fs.h"
+#include "fsvar.h"
+#include "buf.h"
+
 struct devsw devsw[NDEV];
 struct spinlock file_table_lock;
 struct file file[NFILE];
@@ -125,3 +129,53 @@ filewrite(struct file *f, char *addr, int n)
   panic("filewrite");
 }
 
+int filecheck(struct file *f, int offset)
+{
+    if(f->type == FD_INODE)
+    {
+        return cachecheck(f->ip,offset);
+    }
+    
+    return 0;
+    /*
+    uint blocknum;
+    uint sec;
+    uint dev;
+    struct buf *b;
+
+
+    if(f->type == FD_INODE)
+    {
+        //lock it so stuff doesn't change
+        ilock(f->ip);
+        
+        blocknum = offset / BSIZE;
+
+        sec = bmap(f->ip, blocknum, 0);    
+        if(sec == -1)
+        {
+            iunlock(f->ip);
+            return 0;
+        }
+
+        dev = f->ip->dev;
+
+        acquire(&buf_table_lock);
+            for(b = bufhead.next; b != &bufhead; b = b->next)
+            {
+                if((b->flags & (B_BUSY|B_VALID)) &&
+                        b->dev == dev && b->sector == sec)
+                {
+                    release(&buf_table_lock);
+                    iunlock(f->ip);
+                    return 1;
+                }
+            }
+        release(&buf_table_lock);
+
+        iunlock(f->ip);
+    }
+
+    return 0;
+    */
+}

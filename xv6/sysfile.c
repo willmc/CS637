@@ -394,3 +394,23 @@ sys_pipe(void)
   fd[1] = fd1;
   return 0;
 }
+
+int
+sys_check(void)
+{
+    struct file *f;
+
+    int fd, offset;
+
+    if(argfd(0, &fd, &f) < 0 || argint(1, &offset) < 0)
+    {
+        return -1;
+    }
+
+    if((fd < 0) || (cp->ofile[fd] == 0))
+    {
+        return -1;
+    }
+
+    return filecheck(fd, offset);
+}

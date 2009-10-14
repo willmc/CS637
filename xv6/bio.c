@@ -26,6 +26,7 @@
 #include "param.h"
 #include "spinlock.h"
 #include "buf.h"
+#include "fs.h"
 
 struct buf buf[NBUF];
 struct spinlock buf_table_lock;
@@ -135,3 +136,21 @@ brelse(struct buf *b)
   release(&buf_table_lock);
 }
 
+int incache(uint dev, uint sec)
+{
+    struct buf *b;
+
+    acquire(&buf_table_lock);
+        for(b = bufhead.next; b != &bufhead; b = b->next)
+        {
+            if((b->flags & (B_BUSY|B_VALID)) &&
+                    b->dev == dev && b->sector == sec)
+            {
+                release(&buf_table_lock);
+                return 1;
+            }
+        }
+    release(&buf_table_lock);
+
+    return 0;
+}

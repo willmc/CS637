@@ -100,6 +100,7 @@ extern int sys_tickcnt(void);
 extern int sys_get_tickets(void);
 extern int sys_set_tickets(void);
 extern int sys_gettimesrun(void);
+extern int sys_check(void);
 
 
 static int (*syscalls[])(void) = {
@@ -126,7 +127,8 @@ static int (*syscalls[])(void) = {
 [SYS_tickcnt] sys_tickcnt,
 [SYS_get_tickets] sys_get_tickets,
 [SYS_set_tickets] sys_set_tickets,
-[SYS_gettimesrun] sys_gettimesrun
+[SYS_gettimesrun] sys_gettimesrun,
+[SYS_check]       sys_check  
 };
 
 void

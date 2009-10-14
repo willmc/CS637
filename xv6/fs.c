@@ -617,3 +617,33 @@ nameiparent(char *path, char *name)
 {
   return _namei(path, 1, name);
 }
+
+
+int
+cachecheck(struct inode *ip, int offset)
+{
+    uint blocknum;
+    uint sec;
+    uint dev;
+    int retVal = 0;
+
+    ilock(ip);
+
+    blocknum = offset / BSIZE;
+
+    sec = bmap(ip, blocknum, 0);
+
+    if(sec == -1)
+    {
+        iunlock(ip);
+        return 0;
+    }
+
+    dev = ip->dev;
+
+    retVal = incache(dev, sec);
+
+    iunlock(ip);
+
+    return retVal;
+}
