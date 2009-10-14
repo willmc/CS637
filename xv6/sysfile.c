@@ -279,6 +279,8 @@ sys_open(void)
     }
   }
 
+  // filealloc() will return 0 only if it couldn't allocate anything
+  // fdalloc is the same idea
   if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){
     if(f)
       fileclose(f);
