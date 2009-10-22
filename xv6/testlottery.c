@@ -7,7 +7,7 @@ int main(int argc, char *argv[])
 
     if(argc != 2)
     {
-        printf(1,"Needs 2 arguments!\n");
+        printf(1,"Needs 1 arguments!\n");
         exit();
     }
 

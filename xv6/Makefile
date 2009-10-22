@@ -109,12 +109,12 @@ UPROGS=\
 	_sh\
 	_wc\
 	_zombie\
-	_tickcnt\
-	_testcheck\
+	_usertests\
+	#_tickcnt\
+	#_testcheck\
 	#_testlottery\
 	#_forktest\
 	#_testsched\
-	#_usertests\
 
 fs.img: mkfs SHORTTEXT $(UPROGS)
 	./mkfs fs.img SHORTTEXT $(UPROGS)
