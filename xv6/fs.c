@@ -91,6 +91,7 @@ balloc(uint dev)
   int count = 0;
   uchar temp;
   int i;
+  short breakout = 0;
   for (i = 0; i < 512; ++i)
   {
       int j;
@@ -104,8 +105,13 @@ balloc(uint dev)
           else
           {
               b->data[i] |= temp;
+              breakout = 1;
               break;
           }
+      }
+      if (breakout)
+      {
+          break;
       }
   }
   if (count >= 512*8)
@@ -421,7 +427,7 @@ ialloc(uint dev, short type)
                 b->data[i] |= temp;
                 if(cylinder == 0 && i == 0 && j == 0)
                 {
-                    cprintf("j: %d i: %d\n", j, i);
+                    cprintf("j: %d i: %d 2\n", j, i);
                 }
                 else
                 {
@@ -515,6 +521,7 @@ ialloc(uint dev, short type)
     {
         panic("ialloc: no inodes");
     }
+    bwrite(b);
     brelse(b);
     //init inode
     inum = count + cylinder * 100;
