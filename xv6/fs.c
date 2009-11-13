@@ -105,7 +105,7 @@ balloc(uint dev)
           }
           else
           {
-              //cprintf("block alloc i: %d j: %d\n", i, j);
+              cprintf("block alloc i: %d j: %d\n", i, j);
               b->data[i] |= temp;
               breakout = 1;
               break;

@@ -94,7 +94,9 @@ writetest1(void)
     exit();
   }
 
+  printf(stdout, "MAXFILE: %d\n", MAXFILE);
   for(i = 0; i < MAXFILE; i++) {
+  printf(stdout, "i: %d\n", i);
     ((int*) buf)[0] = i;
     if(write(fd, buf, 512) != 512) {
       printf(stdout, "error: write big file failed\n", i);

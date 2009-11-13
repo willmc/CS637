@@ -144,5 +144,5 @@ bochs : fs.img xv6.img
 
 qemu: fs.img xv6.img
 	ctags *.c *.h *.S 
-	qemu -parallel stdio -hdb fs.img xv6.img
+	qemu -s -parallel stdio -hdb fs.img xv6.img
 
