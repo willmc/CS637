@@ -503,6 +503,7 @@ ialloc(uint dev, short type)
                 b->data[i] |= temp;
                 if(cylinder == 0 && i == 0 && j == 0)
                 {
+                    ++count;
                     cprintf("j: %d i: %d\n", j, i);
                 }
                 else
