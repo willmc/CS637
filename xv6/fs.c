@@ -83,7 +83,7 @@ balloc(uint dev)
   int cylinder = inum / 100;
   if (cylinder == 3)
   {
-      panic("ialloc: no blocks in cylinder 3");
+      panic("balloc: no blocks in cylinder 3");
   }
   //get first free block for that cylinder
   struct buf *b;
@@ -118,7 +118,7 @@ balloc(uint dev)
   }
   if (count >= 512*8)
   {
-      panic("ialloc: no blocks");
+      panic("balloc: no blocks");
   }
   bwrite(b);
   brelse(b);
@@ -499,6 +499,14 @@ void
 iupdate(struct inode *ip)
 {
     struct buf *bp;
+    if(ip->type == 0)
+    {
+        bp = bread(ip->dev,IBBLOCK(ip->inum));
+        int boffset = 1 << (ip->inum % 8);
+        bp->data[ip->inum / 8] ^= boffset;
+        bwrite(bp);
+        brelse(bp);
+    }
     struct dinode *dip;
 
     bp = bread(ip->dev, IBLOCK(ip->inum));
@@ -544,6 +552,7 @@ bmap(struct inode *ip, uint bn, int alloc)
       if(!alloc)
         return -1;
       ip->addrs[INDIRECT] = addr = balloc(ip->dev);
+      bzero(ip->dev, addr);
     }
     bp = bread(ip->dev, addr);
     a = (uint*)bp->data;

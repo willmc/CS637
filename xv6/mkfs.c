@@ -85,21 +85,25 @@ main(int argc, char *argv[])
   usedblocks = 39 + bitblocks + 9;
   freeblock = usedblocks;
 
-  printf("used %d (bit %d ninode %lu) free %u total %d\n", usedblocks,
+  fprintf(stderr,"used %d (bit %d ninode %lu) free %u total %d\n", usedblocks,
          bitblocks, 39, freeblock, nblocks+usedblocks);
 
   assert(nblocks + usedblocks == size);
 
 
-  zeroes = (char*)calloc(BSIZE, 1);
 
-  for(i = 0; i < nblocks + usedblocks; i++)
-    wsect(i, zeroes);
+    zeroes = (char*)calloc(BSIZE, 1);
+    for(i = 0; i < nblocks + usedblocks; i++)
+    {
+        wsect(i, zeroes);
+    }
+    fprintf(stderr,"TOKEN: Done zeroing file. Writing super block on each cylinder.\n");
 
   wsect(1, &sb);
   wsect(683, &sb);
   wsect(1364, &sb);
 
+  fprintf(stderr,"Adding . and .. to each cylinder's root.\n");
   uchar buf2[512];
   bzero(buf2, 512);
   wsect(2, buf2);
@@ -117,13 +121,17 @@ main(int argc, char *argv[])
   bzero(&de, sizeof(de));
   de.inum = xshort(rootino);
   strcpy(de.name, ".");
+  fprintf(stderr,"Appending . to root inode\n");
   iappend(rootino, &de, sizeof(de));
 
   bzero(&de, sizeof(de));
   de.inum = xshort(rootino);
   strcpy(de.name, "..");
+  fprintf(stderr,"Appending .. to root inode\n");
   iappend(rootino, &de, sizeof(de));
 
+
+  fprintf(stderr,"Looping over args\n");
   for(i = 2; i < argc; i++){
     assert(index(argv[i], '/') == 0);
 
@@ -144,12 +152,14 @@ main(int argc, char *argv[])
     bzero(&de, sizeof(de));
     de.inum = xshort(inum);
     strncpy(de.name, argv[i], DIRSIZ);
+    fprintf(stderr,"Appending command %s to root inode.\n", argv[i]);
     iappend(rootino, &de, sizeof(de));
 
     while((cc = read(fd, buf, sizeof(buf))) > 0)
       iappend(inum, buf, cc);
 
     close(fd);
+    fprintf(stderr,"Done with command %s\n", argv[i]);
   }
 
   // fix size of root inode dir
@@ -157,8 +167,10 @@ main(int argc, char *argv[])
   off = xint(din.size);
   off = ((off/BSIZE) + 1) * BSIZE;
   din.size = xint(off);
+  fprintf(stderr,"Final winode on root inode.\n");
   winode(rootino, &din);
 
+  fprintf(stderr,"Final balloc, given usedblocks\n");
   balloc(usedblocks);
 
   exit(0);
@@ -167,11 +179,11 @@ main(int argc, char *argv[])
 void
 wsect(uint sec, void *buf)
 {
-  if(lseek(fsfd, sec * BSIZEL, 0) != sec * 512L){
+  if(lseek(fsfd, sec * BSIZEL, 0) != sec * BSIZEL){
     perror("lseek");
     exit(1);
   }
-  if(write(fsfd, buf, BSIZE) != 512){
+  if(write(fsfd, buf, BSIZE) != BSIZE){
     perror("write");
     exit(1);
   }
@@ -256,14 +268,23 @@ balloc(int used)
   uchar buf[BSIZE];
   int i;
 
-  printf("balloc: first %d blocks have been allocated\n", used);
+  fprintf(stderr, "balloc: first %d blocks have been allocated\n", used);
   //assert(used < BSIZE);
   bzero(buf, BSIZE);
   for(i = 0; i < used; i++) {
     buf[i/8] = buf[i/8] | (0x1 << (i%8));
   }
-  printf("balloc: write bitmap block at sector %lu\n", 3);
+  fprintf(stderr, "balloc: write bitmap block at sector %lu\n", 3);
   wsect(3, buf);
+
+  /*
+  bzero(buf,512);
+  for(i = 0; i < freeinode; i++)
+  {
+    buf[i/8] = buf[i/8] | (0x1 << (i%8));
+  }
+  wsect(2,buf);
+  */
 }
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -292,11 +313,11 @@ iappend(uint inum, void *xp, int n)
       x = xint(din.addrs[fbn]);
     } else {
       if(xint(din.addrs[INDIRECT]) == 0) {
-        // printf("allocate indirect block\n");
+        // fprintf(stderr,"allocate indirect block\n");
         din.addrs[INDIRECT] = xint(freeblock++);
         usedblocks++;
       }
-      // printf("read indirect block\n");
+      // fprintf(stderr,"read indirect block\n");
       rsect(xint(din.addrs[INDIRECT]), (char*) indirect);
       if(indirect[fbn - NDIRECT] == 0) {
         indirect[fbn - NDIRECT] = xint(freeblock++);
