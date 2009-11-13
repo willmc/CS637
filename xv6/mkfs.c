@@ -15,7 +15,7 @@ int size = 2048;
 
 int fsfd;
 struct superblock sb;
-char zeroes[BSIZE];
+char *zeroes;
 uint freeblock;
 uint usedblocks;
 uint bitblocks;
@@ -89,6 +89,9 @@ main(int argc, char *argv[])
          bitblocks, 39, freeblock, nblocks+usedblocks);
 
   assert(nblocks + usedblocks == size);
+
+
+  zeroes = (char*)calloc(BSIZE, 1);
 
   for(i = 0; i < nblocks + usedblocks; i++)
     wsect(i, zeroes);
