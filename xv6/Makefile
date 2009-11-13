@@ -38,7 +38,7 @@ AS = $(TOOLPREFIX)gas
 LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
-CFLAGS = -fno-builtin -Wall -MD -ggdb -m32 -DLOTTERY -DSTRACE -O2
+CFLAGS = -fno-builtin -Wall -MD -ggdb -m32 -DLOTTERY -O2
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 ASFLAGS = -m32
 # FreeBSD ld wants ``elf_i386_fbsd''
@@ -144,5 +144,5 @@ bochs : fs.img xv6.img
 
 qemu: fs.img xv6.img
 	ctags *.c *.h *.S 
-	qemu -parallel stdio -s -hdb fs.img xv6.img
+	qemu -parallel stdio -hdb fs.img xv6.img
 
