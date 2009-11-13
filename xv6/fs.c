@@ -54,10 +54,12 @@ bzero(int dev, int bno)
 static uint
 balloc(uint dev)
 {
-  int b, bi, m;
-  struct buf *bp;
-  struct superblock sb;
+  cprintf("-----in balloc\n\0");
+  //int b, bi, m;
+  //struct buf *bp;
+  //struct superblock sb;
 
+  /*
   bp = 0;
   readsb(dev, &sb);
   for(b = 0; b < sb.size; b += BPB){
@@ -73,6 +75,48 @@ balloc(uint dev)
     }
     brelse(bp);
   }
+  */
+
+
+  int inum = cp->cwd->inum; //inode number of the parent directory
+  
+  int cylinder = inum / 100;
+  if (cylinder == 3)
+  {
+      panic("ialloc: no blocks in cylinder 3");
+  }
+  //get first free block for that cylinder
+  struct buf *b;
+  b = bread(dev, cylinder * 682 + 3);
+  int count = 0;
+  uchar temp;
+  int i;
+  for (i = 0; i < 512; ++i)
+  {
+      int j;
+      for (j = 0; j < 8; ++j)
+      {
+          temp = 0x1 << j;
+          if (temp & b->data[i])
+          {
+              ++count;
+          }
+          else
+          {
+              b->data[i] |= temp;
+              break;
+          }
+      }
+  }
+  if (count >= 512*8)
+  {
+      panic("ialloc: no blocks");
+  }
+  bwrite(b);
+  brelse(b);
+  //return block num
+  return count + cylinder*682 + 16;
+
   panic("balloc: out of blocks");
 }
 
@@ -262,16 +306,48 @@ iunlockput(struct inode *ip)
   iput(ip);
 }
 
+//count num of used inodes in a cylinder
+int
+countinodes(int c, uint dev)
+{
+    struct buf *b;
+    b = bread(dev, c * 682 + 2);
+
+    cprintf("countinodes b->sector: %d\n", b->sector);
+
+    int count = 0;
+    uchar temp;
+    int i;
+    for (i = 0; i < 13; ++i)
+    {
+        int j;
+        for (j = 0; j < 8; ++j)
+        {
+            temp = 0x1 << j;
+            if (temp & b->data[i])
+            {
+                ++count;
+            }
+        }
+    }
+
+
+    brelse(b);
+    return count;
+
+}
 // Allocate a new inode with the given type on device dev.
 struct inode*
 ialloc(uint dev, short type)
 {
+  cprintf("----in ialloc\n\0");
   int inum;
   struct buf *bp;
   struct dinode *dip;
   struct superblock sb;
 
   readsb(dev, &sb);
+  /*
   for(inum = 1; inum < sb.ninodes; inum++){  // loop over inode blocks
     bp = bread(dev, IBLOCK(inum));
     dip = (struct dinode*)bp->data + inum%IPB;
@@ -283,6 +359,173 @@ ialloc(uint dev, short type)
       return iget(dev, inum);
     }
     brelse(bp);
+  }
+  */
+  int inode1;
+  int inode2;
+  int inode3;
+  int cylinder;
+  if (type == T_DIR)
+  {
+    cprintf("find an inode for a new dir\n");
+    //find the cylinder with the least num of used inodes
+    inode1 = countinodes(0, dev);
+    inode2 = countinodes(1, dev);
+    inode3 = countinodes(2, dev);
+
+    cprintf("inode1: %d inode2: %d inode3: %d\n", inode1, inode2, inode3);
+
+    if (inode1 < inode2)
+    {
+        if (inode1 < inode3)
+        {
+            cylinder = 0;
+        }
+        else 
+        {
+            cylinder = 2;
+        }
+    }
+    else
+    {
+        if (inode2 < inode3)
+        {
+            cylinder = 1;
+        }
+        else 
+        {
+            cylinder = 2;
+        }
+    }
+
+    cprintf("cylinder: %d\n", cylinder);
+    //get first free inode for that cylinder
+    struct buf *b;
+    b = bread(dev, cylinder * 682 + 2);
+    int count = 0;
+    uchar temp;
+    int i;
+    short breakout = 0;
+    for (i = 0; i < 13; ++i)
+    {
+        int j;
+        for (j = 0; j < 8; ++j)
+        {
+            temp = 0x1 << j;
+            if (temp & b->data[i])
+            {
+                ++count;
+            }
+            else
+            {
+                b->data[i] |= temp;
+                if(cylinder == 0 && i == 0 && j == 0)
+                {
+                    cprintf("j: %d i: %d\n", j, i);
+                }
+                else
+                {
+                    breakout = 1;
+                    break;
+                }
+            }
+        }
+        if(breakout)
+        {
+            break;
+        }
+    }
+    cprintf("count: %d\n", count);
+    if (count > 100)
+    {
+        panic("ialloc: no inodes");
+    }
+    bwrite(b);
+    brelse(b);
+    //init inode
+    inum = count + cylinder * 100;
+    bp = bread(dev, IBLOCK(inum));
+    dip = (struct dinode*)bp->data + inum%IPB;
+    memset(dip, 0, sizeof(*dip));
+    dip->type = type;
+    bwrite(bp);   // mark it allocated on the disk
+    brelse(bp);
+    return iget(dev, inum);
+
+  }
+  else if (type == T_FILE || type == T_DEV)
+  {
+    int inum = cp->cwd->inum; //inode number of the parent directory
+    
+    cylinder = inum / 100;
+    if (cylinder == 3 || countinodes(cylinder, dev) > 99)
+    {
+        if (cylinder == 3)
+        {
+            panic("ialloc: no inodes in cylinder 3");
+        }
+        if (cylinder < 0)
+        {
+            panic("ialloc: cylinder negative");
+        }
+        if (inum < 0)
+        {
+            panic("ialloc: cylinder negative");
+        }
+        cprintf("inum %d cylinder %d count inodes: %d\n", inum, cylinder, countinodes(cylinder, dev));
+        panic("ialloc: no inodes in cylinder of the current working dir");
+    }
+    //get first free inode for that cylinder
+    struct buf *b;
+    b = bread(dev, cylinder * 682 + 2);
+    int count = 0;
+    uchar temp;
+    int i;
+    short breakout = 0;
+    for (i = 0; i < 13; ++i)
+    {
+        int j;
+        for (j = 0; j < 8; ++j)
+        {
+            temp = 0x1 << j;
+            if (temp & b->data[i])
+            {
+                ++count;
+            }
+            else
+            {
+                b->data[i] |= temp;
+                if(cylinder == 0 && i == 0 && j == 0)
+                {
+                    cprintf("j: %d i: %d\n", j, i);
+                }
+                else
+                {
+                    breakout = 1;
+                    break;
+                }
+            }
+        }
+        if(breakout)
+        {
+            break;
+        }
+    }
+    if (count > 100)
+    {
+        panic("ialloc: no inodes");
+    }
+    brelse(b);
+    //init inode
+    inum = count + cylinder * 100;
+    bp = bread(dev, IBLOCK(inum));
+    dip = (struct dinode*)bp->data + inum%IPB;
+    memset(dip, 0, sizeof(*dip));
+    dip->type = type;
+    bwrite(bp);   // mark it allocated on the disk
+    brelse(bp);
+    return iget(dev, inum);
+
   }
   panic("ialloc: no inodes");
 }
@@ -618,7 +861,6 @@ nameiparent(char *path, char *name)
   return _namei(path, 1, name);
 }
 
-
 int
 cachecheck(struct inode *ip, int offset)
 {
@@ -626,24 +868,24 @@ cachecheck(struct inode *ip, int offset)
     uint sec;
     uint dev;
     int retVal = 0;
-
+ 
     ilock(ip);
-
+ 
     blocknum = offset / BSIZE;
-
+ 
     sec = bmap(ip, blocknum, 0);
-
+ 
     if(sec == -1)
     {
         iunlock(ip);
         return 0;
     }
-
+ 
     dev = ip->dev;
-
+ 
     retVal = incache(dev, sec);
-
+ 
     iunlock(ip);
-
+ 
     return retVal;
 }

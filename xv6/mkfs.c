@@ -9,9 +9,9 @@
 
 #define BSIZEL 512L
 
-int nblocks = 995;
-int ninodes = 200;
-int size = 1024;
+int nblocks = 1997;
+int ninodes = 300;
+int size = 2048;
 
 int fsfd;
 struct superblock sb;
@@ -79,12 +79,14 @@ main(int argc, char *argv[])
   sb.nblocks = xint(nblocks); // so whole disk is size sectors
   sb.ninodes = xint(ninodes);
 
-  bitblocks = size/(BSIZE*8) + 1;
-  usedblocks = ninodes / IPB + 3 + bitblocks;
+  //bitblocks = size/(BSIZE*8) + 1;
+  //usedblocks = ninodes / IPB + 3 + bitblocks;
+  bitblocks = 3;
+  usedblocks = 39 + bitblocks + 9;
   freeblock = usedblocks;
 
   printf("used %d (bit %d ninode %lu) free %u total %d\n", usedblocks,
-         bitblocks, ninodes/IPB + 1, freeblock, nblocks+usedblocks);
+         bitblocks, 39, freeblock, nblocks+usedblocks);
 
   assert(nblocks + usedblocks == size);
 
@@ -92,7 +94,20 @@ main(int argc, char *argv[])
     wsect(i, zeroes);
 
   wsect(1, &sb);
+  wsect(683, &sb);
+  wsect(1364, &sb);
 
+  uchar buf2[512];
+  bzero(buf2, 512);
+  wsect(2, buf2);
+  wsect(3, buf2);
+  wsect(684, buf2);
+  wsect(685, buf2);
+  wsect(1366, buf2);
+  wsect(1367, buf2);
+
+
+  usedblocks = 0;
   rootino = ialloc(T_DIR);
   assert(rootino == 1);
 
@@ -162,7 +177,7 @@ wsect(uint sec, void *buf)
 uint
 i2b(uint inum)
 {
-  return (inum / IPB) + 2;
+  return (inum / 100) * 682 + 4 + (inum % 100) / IPB;
 }
 
 void
@@ -216,6 +231,19 @@ ialloc(ushort type)
   din.nlink = xshort(1);
   din.size = xint(0);
   winode(inum, &din);
+
+  uchar buf[512];
+  if (inum == 1)
+  {
+    bzero(buf, 512);
+    buf[inum/8] = buf[inum/8] | (0x1 << (inum%8));
+  }
+  else 
+  {
+    rsect(2, buf);
+    buf[inum/8] = buf[inum/8] | (0x1 << (inum%8));
+  }
+  wsect(2, buf);
   return inum;
 }
 
@@ -231,8 +259,8 @@ balloc(int used)
   for(i = 0; i < used; i++) {
     buf[i/8] = buf[i/8] | (0x1 << (i%8));
   }
-  printf("balloc: write bitmap block at sector %lu\n", ninodes/IPB + 3);
-  wsect(ninodes / IPB + 3, buf);
+  printf("balloc: write bitmap block at sector %lu\n", 3);
+  wsect(3, buf);
 }
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
