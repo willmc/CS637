@@ -54,7 +54,7 @@ bzero(int dev, int bno)
 static uint
 balloc(uint dev)
 {
-  cprintf("-----in balloc\n\0");
+  //cprintf("-----in balloc\n\0");
   //int b, bi, m;
   //struct buf *bp;
   //struct superblock sb;
@@ -94,6 +94,7 @@ balloc(uint dev)
   short breakout = 0;
   for (i = 0; i < 512; ++i)
   {
+  //if (cylinder == 0 && i == 53) cprintf("cylind 0, i = 53");
       int j;
       for (j = 0; j < 8; ++j)
       {
@@ -104,6 +105,7 @@ balloc(uint dev)
           }
           else
           {
+              //cprintf("block alloc i: %d j: %d\n", i, j);
               b->data[i] |= temp;
               breakout = 1;
               break;
@@ -134,11 +136,15 @@ bfree(int dev, uint b)
   struct superblock sb;
   int bi, m;
 
+//cprintf("free block: %d\n", b);
+
   bzero(dev, b);
 
   readsb(dev, &sb);
   bp = bread(dev, BBLOCK(b, sb.ninodes));
-  bi = b % BPB;
+//cprintf("bit block sector read: %d\n", bp->sector);
+  bi = (b-16) % BPB;
+//cprintf("bi: %d data[53]: %d\n", bi, (short)(bp->data[53]));
   m = 1 << (bi % 8);
   if((bp->data[bi/8] & m) == 0)
     panic("freeing free block");
@@ -319,7 +325,7 @@ countinodes(int c, uint dev)
     struct buf *b;
     b = bread(dev, c * 682 + 2);
 
-    cprintf("countinodes b->sector: %d\n", b->sector);
+    //cprintf("countinodes b->sector: %d\n", b->sector);
 
     int count = 0;
     uchar temp;
@@ -347,7 +353,7 @@ countinodes(int c, uint dev)
 struct inode*
 ialloc(uint dev, short type)
 {
-    cprintf("----in ialloc\n\0");
+    //cprintf("----in ialloc\n\0");
     int inum;
     struct buf *bp;
     struct dinode *dip;
@@ -374,13 +380,13 @@ ialloc(uint dev, short type)
     int cylinder;
     if (type == T_DIR)
     {
-        cprintf("find an inode for a new dir\n");
+        //cprintf("find an inode for a new dir\n");
         //find the cylinder with the least num of used inodes
         inode1 = countinodes(0, dev);
         inode2 = countinodes(1, dev);
         inode3 = countinodes(2, dev);
 
-        cprintf("inode1: %d inode2: %d inode3: %d\n", inode1, inode2, inode3);
+        //cprintf("inode1: %d inode2: %d inode3: %d\n", inode1, inode2, inode3);
 
         if (inode1 < inode2)
         {
@@ -425,12 +431,12 @@ ialloc(uint dev, short type)
             {
                 panic("ialloc: cylinder negative");
             }
-            cprintf("inum %d cylinder %d count inodes: %d\n", inum, cylinder, countinodes(cylinder, dev));
+            //cprintf("inum %d cylinder %d count inodes: %d\n", inum, cylinder, countinodes(cylinder, dev));
             panic("ialloc: no inodes in cylinder of the current working dir");
         }
     }
 
-    cprintf("cylinder: %d\n", cylinder);
+    //cprintf("cylinder: %d\n", cylinder);
     //get first free inode for that cylinder
     struct buf *b;
     b = bread(dev, cylinder * 682 + 2);
@@ -454,7 +460,7 @@ ialloc(uint dev, short type)
                 if(cylinder == 0 && i == 0 && j == 0)
                 {
                     ++count;
-                    cprintf("j: %d i: %d\n", j, i);
+                    //cprintf("j: %d i: %d\n", j, i);
                 }
                 else
                 {
@@ -468,7 +474,7 @@ ialloc(uint dev, short type)
             break;
         }
     }
-    cprintf("count: %d\n", count);
+    //cprintf("count: %d\n", count);
     if (count > 100)
     {
         panic("ialloc: no inodes");
