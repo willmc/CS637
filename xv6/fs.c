@@ -181,14 +181,14 @@ bfree(int dev, uint b)
 // ip->ref keeps these unlocked inodes in the cache.
 
 struct {
-  struct spinlock lock;
-  struct inode inode[NINODE];
+    struct spinlock lock;
+    struct inode inode[NINODE];
 } icache;
 
 void
 iinit(void)
 {
-  initlock(&icache.lock, "icache.lock");
+    initlock(&icache.lock, "icache.lock");
 }
 
 // Find the inode with number inum on device dev
@@ -196,34 +196,34 @@ iinit(void)
 static struct inode*
 iget(uint dev, uint inum)
 {
-  struct inode *ip, *empty;
+    struct inode *ip, *empty;
 
-  acquire(&icache.lock);
+    acquire(&icache.lock);
 
-  // Try for cached inode.
-  empty = 0;
-  for(ip = &icache.inode[0]; ip < &icache.inode[NINODE]; ip++){
-    if(ip->ref > 0 && ip->dev == dev && ip->inum == inum){
-      ip->ref++;
-      release(&icache.lock);
-      return ip;
+    // Try for cached inode.
+    empty = 0;
+    for(ip = &icache.inode[0]; ip < &icache.inode[NINODE]; ip++){
+        if(ip->ref > 0 && ip->dev == dev && ip->inum == inum){
+        ip->ref++;
+        release(&icache.lock);
+        return ip;
+        }
+        if(empty == 0 && ip->ref == 0)    // Remember empty slot.
+        empty = ip;
     }
-    if(empty == 0 && ip->ref == 0)    // Remember empty slot.
-      empty = ip;
-  }
 
-  // Allocate fresh inode.
-  if(empty == 0)
-    panic("iget: no inodes");
+    // Allocate fresh inode.
+    if(empty == 0)
+        panic("iget: no inodes");
 
-  ip = empty;
-  ip->dev = dev;
-  ip->inum = inum;
-  ip->ref = 1;
-  ip->flags = 0;
-  release(&icache.lock);
+    ip = empty;
+    ip->dev = dev;
+    ip->inum = inum;
+    ip->ref = 1;
+    ip->flags = 0;
+    release(&icache.lock);
 
-  return ip;
+    return ip;
 }
 
 // Increment reference count for ip.
@@ -231,85 +231,85 @@ iget(uint dev, uint inum)
 struct inode*
 idup(struct inode *ip)
 {
-  acquire(&icache.lock);
-  ip->ref++;
-  release(&icache.lock);
-  return ip;
+    acquire(&icache.lock);
+    ip->ref++;
+    release(&icache.lock);
+    return ip;
 }
 
 // Lock the given inode.
 void
 ilock(struct inode *ip)
 {
-  struct buf *bp;
-  struct dinode *dip;
+    struct buf *bp;
+    struct dinode *dip;
 
-  if(ip == 0 || ip->ref < 1)
-    panic("ilock");
+    if(ip == 0 || ip->ref < 1)
+        panic("ilock");
 
-  acquire(&icache.lock);
-  while(ip->flags & I_BUSY)
-    sleep(ip, &icache.lock);
-  ip->flags |= I_BUSY;
-  release(&icache.lock);
+    acquire(&icache.lock);
+    while(ip->flags & I_BUSY)
+        sleep(ip, &icache.lock);
+    ip->flags |= I_BUSY;
+    release(&icache.lock);
 
-  if(!(ip->flags & I_VALID)){
-    bp = bread(ip->dev, IBLOCK(ip->inum));
-    dip = (struct dinode*)bp->data + ip->inum%IPB;
-    ip->type = dip->type;
-    ip->major = dip->major;
-    ip->minor = dip->minor;
-    ip->nlink = dip->nlink;
-    ip->size = dip->size;
-    memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
-    brelse(bp);
-    ip->flags |= I_VALID;
-    if(ip->type == 0)
-      panic("ilock: no type");
-  }
+    if(!(ip->flags & I_VALID)){
+        bp = bread(ip->dev, IBLOCK(ip->inum));
+        dip = (struct dinode*)bp->data + ip->inum%IPB;
+        ip->type = dip->type;
+        ip->major = dip->major;
+        ip->minor = dip->minor;
+        ip->nlink = dip->nlink;
+        ip->size = dip->size;
+        memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
+        brelse(bp);
+        ip->flags |= I_VALID;
+        if(ip->type == 0)
+        panic("ilock: no type");
+    }
 }
 
 // Unlock the given inode.
 void
 iunlock(struct inode *ip)
 {
-  if(ip == 0 || !(ip->flags & I_BUSY) || ip->ref < 1)
-    panic("iunlock");
+    if(ip == 0 || !(ip->flags & I_BUSY) || ip->ref < 1)
+        panic("iunlock");
 
-  acquire(&icache.lock);
-  ip->flags &= ~I_BUSY;
-  wakeup(ip);
-  release(&icache.lock);
+    acquire(&icache.lock);
+    ip->flags &= ~I_BUSY;
+    wakeup(ip);
+    release(&icache.lock);
 }
 
 // Caller holds reference to unlocked ip.  Drop reference.
 void
 iput(struct inode *ip)
 {
-  acquire(&icache.lock);
-  if(ip->ref == 1 && (ip->flags & I_VALID) && ip->nlink == 0){
-    // inode is no longer used: truncate and free inode.
-    if(ip->flags & I_BUSY)
-      panic("iput busy");
-    ip->flags |= I_BUSY;
-    release(&icache.lock);
-    itrunc(ip);
-    ip->type = 0;
-    iupdate(ip);
     acquire(&icache.lock);
-    ip->flags &= ~I_BUSY;
-    wakeup(ip);
-  }
-  ip->ref--;
-  release(&icache.lock);
+    if(ip->ref == 1 && (ip->flags & I_VALID) && ip->nlink == 0){
+        // inode is no longer used: truncate and free inode.
+        if(ip->flags & I_BUSY)
+        panic("iput busy");
+        ip->flags |= I_BUSY;
+        release(&icache.lock);
+        itrunc(ip);
+        ip->type = 0;
+        iupdate(ip);
+        acquire(&icache.lock);
+        ip->flags &= ~I_BUSY;
+        wakeup(ip);
+    }
+    ip->ref--;
+    release(&icache.lock);
 }
 
 // Common idiom: unlock, then put.
 void
 iunlockput(struct inode *ip)
 {
-  iunlock(ip);
-  iput(ip);
+    iunlock(ip);
+    iput(ip);
 }
 
 //count num of used inodes in a cylinder
@@ -342,145 +342,95 @@ countinodes(int c, uint dev)
     return count;
 
 }
+
 // Allocate a new inode with the given type on device dev.
 struct inode*
 ialloc(uint dev, short type)
 {
-  cprintf("----in ialloc\n\0");
-  int inum;
-  struct buf *bp;
-  struct dinode *dip;
-  struct superblock sb;
+    cprintf("----in ialloc\n\0");
+    int inum;
+    struct buf *bp;
+    struct dinode *dip;
+    struct superblock sb;
 
-  readsb(dev, &sb);
-  /*
-  for(inum = 1; inum < sb.ninodes; inum++){  // loop over inode blocks
-    bp = bread(dev, IBLOCK(inum));
-    dip = (struct dinode*)bp->data + inum%IPB;
-    if(dip->type == 0){  // a free inode
-      memset(dip, 0, sizeof(*dip));
-      dip->type = type;
-      bwrite(bp);   // mark it allocated on the disk
-      brelse(bp);
-      return iget(dev, inum);
+    readsb(dev, &sb);
+    /*
+    for(inum = 1; inum < sb.ninodes; inum++){  // loop over inode blocks
+        bp = bread(dev, IBLOCK(inum));
+        dip = (struct dinode*)bp->data + inum%IPB;
+        if(dip->type == 0){  // a free inode
+        memset(dip, 0, sizeof(*dip));
+        dip->type = type;
+        bwrite(bp);   // mark it allocated on the disk
+        brelse(bp);
+        return iget(dev, inum);
+        }
+        brelse(bp);
     }
-    brelse(bp);
-  }
-  */
-  int inode1;
-  int inode2;
-  int inode3;
-  int cylinder;
-  if (type == T_DIR)
-  {
-    cprintf("find an inode for a new dir\n");
-    //find the cylinder with the least num of used inodes
-    inode1 = countinodes(0, dev);
-    inode2 = countinodes(1, dev);
-    inode3 = countinodes(2, dev);
-
-    cprintf("inode1: %d inode2: %d inode3: %d\n", inode1, inode2, inode3);
-
-    if (inode1 < inode2)
+    */
+    int inode1;
+    int inode2;
+    int inode3;
+    int cylinder;
+    if (type == T_DIR)
     {
-        if (inode1 < inode3)
+        cprintf("find an inode for a new dir\n");
+        //find the cylinder with the least num of used inodes
+        inode1 = countinodes(0, dev);
+        inode2 = countinodes(1, dev);
+        inode3 = countinodes(2, dev);
+
+        cprintf("inode1: %d inode2: %d inode3: %d\n", inode1, inode2, inode3);
+
+        if (inode1 < inode2)
         {
-            cylinder = 0;
+            if (inode1 < inode3)
+            {
+                cylinder = 0;
+            }
+            else 
+            {
+                cylinder = 2;
+            }
         }
-        else 
+        else
         {
-            cylinder = 2;
+            if (inode2 < inode3)
+            {
+                cylinder = 1;
+            }
+            else 
+            {
+                cylinder = 2;
+            }
         }
     }
-    else
+    else if (type == T_FILE || type == T_DEV)
     {
-        if (inode2 < inode3)
+
+        inum = cp->cwd->inum; //inode number of the parent directory
+        
+        cylinder = inum / 100;
+        if (cylinder == 3 || countinodes(cylinder, dev) > 99)
         {
-            cylinder = 1;
-        }
-        else 
-        {
-            cylinder = 2;
+            if (cylinder == 3)
+            {
+                panic("ialloc: no inodes in cylinder 3");
+            }
+            if (cylinder < 0)
+            {
+                panic("ialloc: cylinder negative");
+            }
+            if (inum < 0)
+            {
+                panic("ialloc: cylinder negative");
+            }
+            cprintf("inum %d cylinder %d count inodes: %d\n", inum, cylinder, countinodes(cylinder, dev));
+            panic("ialloc: no inodes in cylinder of the current working dir");
         }
     }
 
     cprintf("cylinder: %d\n", cylinder);
-    //get first free inode for that cylinder
-    struct buf *b;
-    b = bread(dev, cylinder * 682 + 2);
-    int count = 0;
-    uchar temp;
-    int i;
-    short breakout = 0;
-    for (i = 0; i < 13; ++i)
-    {
-        int j;
-        for (j = 0; j < 8; ++j)
-        {
-            temp = 0x1 << j;
-            if (temp & b->data[i])
-            {
-                ++count;
-            }
-            else
-            {
-                b->data[i] |= temp;
-                if(cylinder == 0 && i == 0 && j == 0)
-                {
-                    cprintf("j: %d i: %d 2\n", j, i);
-                }
-                else
-                {
-                    breakout = 1;
-                    break;
-                }
-            }
-        }
-        if(breakout)
-        {
-            break;
-        }
-    }
-    cprintf("count: %d\n", count);
-    if (count > 100)
-    {
-        panic("ialloc: no inodes");
-    }
-    bwrite(b);
-    brelse(b);
-    //init inode
-    inum = count + cylinder * 100;
-    bp = bread(dev, IBLOCK(inum));
-    dip = (struct dinode*)bp->data + inum%IPB;
-    memset(dip, 0, sizeof(*dip));
-    dip->type = type;
-    bwrite(bp);   // mark it allocated on the disk
-    brelse(bp);
-    return iget(dev, inum);
-
-  }
-  else if (type == T_FILE || type == T_DEV)
-  {
-    int inum = cp->cwd->inum; //inode number of the parent directory
-    
-    cylinder = inum / 100;
-    if (cylinder == 3 || countinodes(cylinder, dev) > 99)
-    {
-        if (cylinder == 3)
-        {
-            panic("ialloc: no inodes in cylinder 3");
-        }
-        if (cylinder < 0)
-        {
-            panic("ialloc: cylinder negative");
-        }
-        if (inum < 0)
-        {
-            panic("ialloc: cylinder negative");
-        }
-        cprintf("inum %d cylinder %d count inodes: %d\n", inum, cylinder, countinodes(cylinder, dev));
-        panic("ialloc: no inodes in cylinder of the current working dir");
-    }
     //get first free inode for that cylinder
     struct buf *b;
     b = bread(dev, cylinder * 682 + 2);
@@ -518,6 +468,7 @@ ialloc(uint dev, short type)
             break;
         }
     }
+    cprintf("count: %d\n", count);
     if (count > 100)
     {
         panic("ialloc: no inodes");
@@ -534,27 +485,26 @@ ialloc(uint dev, short type)
     brelse(bp);
     return iget(dev, inum);
 
-  }
-  panic("ialloc: no inodes");
+    panic("ialloc: no inodes");
 }
 
 // Copy inode, which has changed, from memory to disk.
 void
 iupdate(struct inode *ip)
 {
-  struct buf *bp;
-  struct dinode *dip;
+    struct buf *bp;
+    struct dinode *dip;
 
-  bp = bread(ip->dev, IBLOCK(ip->inum));
-  dip = (struct dinode*)bp->data + ip->inum%IPB;
-  dip->type = ip->type;
-  dip->major = ip->major;
-  dip->minor = ip->minor;
-  dip->nlink = ip->nlink;
-  dip->size = ip->size;
-  memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
-  bwrite(bp);
-  brelse(bp);
+    bp = bread(ip->dev, IBLOCK(ip->inum));
+    dip = (struct dinode*)bp->data + ip->inum%IPB;
+    dip->type = ip->type;
+    dip->major = ip->major;
+    dip->minor = ip->minor;
+    dip->nlink = ip->nlink;
+    dip->size = ip->size;
+    memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
+    bwrite(bp);
+    brelse(bp);
 }
 
 // Inode contents
