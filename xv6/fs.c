@@ -1,4 +1,4 @@
-// File system implementation.  Four layers:
+// File system implementation.  Four layers: 
 //   + Blocks: allocator for raw disk blocks.
 //   + Files: inode allocator, reading, writing, metadata.
 //   + Directories: inode with special contents (list of other inodes!)
