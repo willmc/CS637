@@ -43,8 +43,7 @@ ls(char *path)
   
   switch(st.type){
   case T_FILE:
-    //printf(1, "%s %d %d %d\n", fmtname(path), st.type, st.ino, st.size);
-    printf(1, "%s %s %d %d\n", fmtname(path), "FILE", st.ino, st.size);
+    printf(1, "%s %d %d %d\n", fmtname(path), st.type, st.ino, st.size);
     break;
   
   case T_DIR:
@@ -64,15 +63,7 @@ ls(char *path)
         printf(1, "ls: cannot stat %s\n", buf);
         continue;
       }
-      char *tmp;
-      if(st.type == T_DIR)
-          tmp = "DIR ";
-      else if (st.type == T_FILE )
-          tmp = "FILE";
-      else if (st.type == T_DEV )
-          tmp = "DEV ";
-
-      printf(1, "%s %s %d %d\n", fmtname(buf), tmp, st.ino, st.size);
+      printf(1, "%s %d %d %d\n", fmtname(buf), st.type, st.ino, st.size);
     }
     break;
   }
